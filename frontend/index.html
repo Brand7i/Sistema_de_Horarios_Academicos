@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Horarios Academicos</title>
+    <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+    <main class="layout">
+        <section class="hero">
+            <p class="eyebrow">Ingenieria Informatica</p>
+            <h1>Generador de horarios con algoritmos geneticos</h1>
+            <p class="lead">
+                Esta base del proyecto organiza el backend, el frontend y el motor genetico
+                para construir horarios sin choques de docentes, aulas y grupos.
+            </p>
+            <button id="load-sample">Probar endpoint de ejemplo</button>
+        </section>
+
+        <section class="panel">
+            <h2>Como se aplican los algoritmos geneticos</h2>
+            <ol>
+                <li>Cada individuo representa un horario completo.</li>
+                <li>La funcion de fitness castiga conflictos y premia mejores distribuciones.</li>
+                <li>Seleccion, cruce y mutacion mejoran la poblacion por generaciones.</li>
+                <li>El sistema devuelve el mejor horario encontrado.</li>
+            </ol>
+        </section>
+
+        <section class="panel">
+            <h2>Resultado</h2>
+            <pre id="output">Conecta el backend y consulta /api/schedules/sample</pre>
+        </section>
+    </main>
+
+    <script src="./assets/app.js"></script>
+</body>
+</html>
