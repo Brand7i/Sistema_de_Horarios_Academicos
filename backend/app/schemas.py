@@ -61,15 +61,47 @@ class GrupoResponse(GrupoBase):
 
 class HorarioResponse(BaseModel):
     id: int
+    materia_id: int
     materia: str
     sigla: str
+    docente_id: int
     docente: str
+    aula_id: int
     aula: str
+    grupo_id: int
     grupo: str
     semestre: int
     dia: str
     bloque: str
     tipo: str
+    origen: str
+    escenario: str | None = None
 
     class Config:
         from_attributes = True
+
+
+class DocenteOpcion(BaseModel):
+    id: int
+    nombre: str
+    grupo_referencia: str
+
+
+class MateriaConfiguracion(BaseModel):
+    materia_id: int
+    nombre: str
+    sigla: str
+    tipo: str
+    horas_semana: int
+    docentes: list[DocenteOpcion]
+
+
+class HorarioConfiguracionResponse(BaseModel):
+    semestre: int
+    nivel: str
+    materias: list[MateriaConfiguracion]
+
+
+class HorarioGeneracionRequest(BaseModel):
+    semestre: int
+    docentes_por_materia: dict[int, int | list[int]]

@@ -1,26 +1,108 @@
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
+import ScheduleGrid from "../components/ScheduleGrid";
 import TablaHorario from "../components/TablaHorario";
 
+const niveles = {
+  1: "Nivel A",
+  2: "Nivel B",
+  3: "Nivel C",
+  4: "Nivel D",
+  5: "Nivel E",
+  6: "Nivel F",
+  7: "Nivel G",
+  8: "Nivel H",
+  9: "Nivel I",
+};
+
+function esFisicaGeneralEspecial(materia) {
+  return materia?.sigla === "2006063";
+}
+
+function extraerDocentesSeleccionados(valor) {
+  if (Array.isArray(valor)) return valor;
+  return valor ? [valor] : [];
+}
+
+function construirSeleccionDesdeHorario(horario) {
+  const seleccionActual = {};
+
+  for (const bloque of horario || []) {
+    if (!seleccionActual[bloque.materia_id]) {
+      seleccionActual[bloque.materia_id] = [];
+    }
+    if (!seleccionActual[bloque.materia_id].includes(bloque.docente_id)) {
+      seleccionActual[bloque.materia_id].push(bloque.docente_id);
+    }
+  }
+
+  return seleccionActual;
+}
+
 export default function GenerarHorario() {
+  const [semestre, setSemestre] = useState(1);
+  const [config, setConfig] = useState(null);
+  const [horariosImportados, setHorariosImportados] = useState([]);
   const [horarios, setHorarios] = useState([]);
+  const [alternativasAG, setAlternativasAG] = useState([]);
+  const [indiceAlternativa, setIndiceAlternativa] = useState(0);
+  const [seleccion, setSeleccion] = useState({});
   const [resultado, setResultado] = useState(null);
   const [cargando, setCargando] = useState(false);
 
-  const cargarHorario = () => {
-    api.get("/horarios/").then((res) => setHorarios(res.data));
+  const cargarConfiguracion = async (valorSemestre) => {
+    const [configRes, importadosRes] = await Promise.all([
+      api.get("/horarios/configuracion", { params: { semestre: valorSemestre } }),
+      api.get("/horarios/", { params: { origen: "importado", semestre: valorSemestre } }),
+    ]);
+
+    setConfig(configRes.data);
+    setHorariosImportados(importadosRes.data);
+    setHorarios([]);
+    setSeleccion({});
+    setAlternativasAG([]);
+    setIndiceAlternativa(0);
+    setResultado(null);
   };
 
-  useEffect(() => { cargarHorario(); }, []);
+  useEffect(() => {
+    cargarConfiguracion(semestre);
+  }, [semestre]);
+
+  useEffect(() => {
+    if (alternativasAG.length > 0) {
+      setHorarios(alternativasAG[indiceAlternativa]?.horario || []);
+      return;
+    }
+
+    const seleccionIds = new Set(Object.values(seleccion));
+    if (seleccionIds.size === 0) {
+      setHorarios([]);
+      return;
+    }
+
+    const preview = horariosImportados.filter((horario) => {
+      const docentesSeleccionados = extraerDocentesSeleccionados(seleccion[horario.materia_id]);
+      return docentesSeleccionados.includes(horario.docente_id);
+    });
+    setHorarios(preview);
+  }, [alternativasAG, indiceAlternativa, seleccion, horariosImportados]);
 
   const generar = async () => {
+    if (!config) return;
+
     setCargando(true);
     setResultado(null);
 
     try {
-      const res = await api.post("/horarios/generar");
+      const res = await api.post("/horarios/generar", {
+        semestre,
+        docentes_por_materia: seleccion,
+      });
       setResultado(res.data);
-      cargarHorario();
+      setAlternativasAG(res.data.alternativas || []);
+      setIndiceAlternativa(0);
+      setHorarios((res.data.alternativas && res.data.alternativas[0]?.horario) || []);
     } catch (error) {
       alert(error.response?.data?.detail || "Error al generar horario");
     } finally {
@@ -28,34 +110,140 @@ export default function GenerarHorario() {
     }
   };
 
+  const totalMaterias = config?.materias.length || 0;
+  const totalSeleccionadas = Object.values(seleccion).filter((valor) => extraerDocentesSeleccionados(valor).length > 0).length;
+  const puedeGenerar = !!config && !cargando;
+  const alternativaActual = alternativasAG[indiceAlternativa] || null;
+  const totalAlternativas = alternativasAG.length;
+  const mostrandoPreview = totalAlternativas === 0 && totalSeleccionadas > 0;
+  const seleccionVisible = totalAlternativas > 0
+    ? construirSeleccionDesdeHorario(alternativaActual?.horario || [])
+    : seleccion;
+
   return (
     <section>
-      <h1>Generar horario</h1>
-      <p className="subtitulo">
-        El sistema aplicará selección, cruce y mutación para buscar el mejor horario posible.
-      </p>
+      <h1>Generador de horarios</h1>
 
-      <button className="primary" onClick={generar} disabled={cargando}>
-        {cargando ? "Generando..." : "Generar horario con AG"}
-      </button>
+      <div className="horarios-layout">
+        <aside className="selection-panel">
+          <div className="selection-controls">
+            <select value={semestre} onChange={(e) => setSemestre(Number(e.target.value))}>
+              {Object.entries(niveles).map(([valor, texto]) => (
+                <option key={valor} value={valor}>{texto}</option>
+              ))}
+            </select>
 
-      {resultado && (
-        <div className="resultado">
-          <h3>Resultado del algoritmo</h3>
-          <p><strong>Fitness:</strong> {resultado.fitness}</p>
-          <p><strong>Total de clases:</strong> {resultado.total_clases}</p>
-          <p><strong>Conflictos detectados:</strong> {resultado.conflictos.length}</p>
+            <button onClick={generar} disabled={!puedeGenerar}>
+              {cargando ? "Generando..." : "Generar horario con AG"}
+            </button>
+            <span className="selection-status">
+              {totalSeleccionadas} de {totalMaterias} materias con docente fijado manualmente
+            </span>
+          </div>
 
-          {resultado.conflictos.length > 0 && (
-            <ul>
-              {resultado.conflictos.map((c, index) => <li key={index}>{c}</li>)}
-            </ul>
+          {config && (
+            <div className="selection-list">
+              <h3>{niveles[semestre]}</h3>
+              {config.materias.map((materia) => (
+                <div
+                  key={materia.materia_id}
+                  className={`subject-card ${seleccion[materia.materia_id] ? "" : "subject-card-pending"}`}
+                >
+                  <div className="subject-header">
+                    <strong>{materia.nombre}</strong>
+                    <span>{materia.sigla}</span>
+                  </div>
+                  <div className="subject-meta">
+                    <span>{materia.horas_semana} h/semana</span>
+                    <span>{materia.tipo}</span>
+                  </div>
+                  <div className="subject-state">
+                    {seleccionVisible[materia.materia_id] ? "Docente usado en esta opcion" : "Seleccion automatica"}
+                  </div>
+                  <div className="teacher-options">
+                    {materia.docentes.map((docente) => (
+                      <label
+                        key={docente.id}
+                        className={`teacher-option ${esFisicaGeneralEspecial(materia) && docente.grupo_referencia.endsWith("-GB") ? "teacher-option-fixed" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          name={`materia-${materia.materia_id}`}
+                          checked={extraerDocentesSeleccionados(seleccionVisible[materia.materia_id]).includes(docente.id)}
+                          onChange={() => setSeleccion((actual) => ({
+                            ...actual,
+                            [materia.materia_id]: docente.id,
+                          }))}
+                        />
+                        <span>
+                          {docente.grupo_referencia} {docente.nombre}
+                          {esFisicaGeneralEspecial(materia) && docente.grupo_referencia.endsWith("-GB")
+                            ? " - teoria fija"
+                            : ""}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
-      )}
+        </aside>
 
-      <h2>Horario generado</h2>
-      <TablaHorario horarios={horarios} />
+        <div className="schedule-panel">
+          {resultado && (
+            <div className="resultado">
+              <h3>Resultado del algoritmo</h3>
+              <p><strong>Total de clases:</strong> {resultado.total_clases}</p>
+              <p><strong>Materias:</strong> {resultado.parametros.materias}</p>
+              <p><strong>Bloques base del importado:</strong> {resultado.parametros.clases_base_importadas}</p>
+              <p><strong>Alternativas generadas:</strong> {resultado.parametros.alternativas}</p>
+              <p><strong>Conflictos:</strong> {resultado.conflictos.length}</p>
+            </div>
+          )}
+
+          {totalAlternativas > 0 && (
+            <div className="alternatives-bar">
+              <button
+                type="button"
+                className="secondary"
+                disabled={indiceAlternativa === 0}
+                onClick={() => setIndiceAlternativa((actual) => Math.max(0, actual - 1))}
+              >
+                Anterior
+              </button>
+              <span>Horario {indiceAlternativa + 1} de {totalAlternativas}</span>
+              <button
+                type="button"
+                className="secondary"
+                disabled={indiceAlternativa >= totalAlternativas - 1}
+                onClick={() => setIndiceAlternativa((actual) => Math.min(totalAlternativas - 1, actual + 1))}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+
+          {mostrandoPreview && (
+            <div className="info-box">
+              <strong>Vista previa de seleccion</strong>
+              <p>
+                La grilla muestra los bloques importados de los docentes que vas marcando. Cuando pulses
+                `Generar`, el AG construira alternativas usando esas elecciones como restriccion.
+              </p>
+            </div>
+          )}
+
+          <ScheduleGrid horarios={horarios} />
+
+          <div className="table-section">
+            <h3>
+              {mostrandoPreview ? "Detalle de la seleccion actual" : "Detalle generado por AG"}
+            </h3>
+            <TablaHorario horarios={horarios} />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

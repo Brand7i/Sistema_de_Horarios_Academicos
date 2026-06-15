@@ -5,13 +5,13 @@ export default function Navbar({ vista, setVista }) {
     ["materias", "Materias"],
     ["aulas", "Aulas"],
     ["grupos", "Grupos"],
-    ["generar", "Generar horario"],
+    ["generar", "Generador de horarios"],
   ];
 
   return (
     <aside className="sidebar">
-      <h2>Horarios AG</h2>
-      <p>Ingeniería Informática UMSS</p>
+      <h2>Generador de horarios</h2>
+      <p>Ingenieria Informatica UMSS</p>
 
       <nav>
         {opciones.map(([key, label]) => (

@@ -3,39 +3,19 @@ import { api } from "../services/api";
 
 export default function Aulas() {
   const [aulas, setAulas] = useState([]);
-  const [form, setForm] = useState({
-    nombre: "",
-    capacidad: 40,
-    tipo: "Teórica",
-  });
 
   const cargar = () => api.get("/aulas/").then((res) => setAulas(res.data));
 
-  useEffect(() => { cargar(); }, []);
-
-  const guardar = async (e) => {
-    e.preventDefault();
-    await api.post("/aulas/", {
-      ...form,
-      capacidad: Number(form.capacidad),
-    });
-    setForm({ nombre: "", capacidad: 40, tipo: "Teórica" });
+  useEffect(() => {
     cargar();
-  };
+  }, []);
 
   return (
     <section>
       <h1>Aulas</h1>
-
-      <form className="form" onSubmit={guardar}>
-        <input placeholder="Nombre del aula" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-        <input type="number" placeholder="Capacidad" value={form.capacidad} onChange={(e) => setForm({ ...form, capacidad: e.target.value })} required />
-        <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
-          <option>Teórica</option>
-          <option>Laboratorio</option>
-        </select>
-        <button>Guardar aula</button>
-      </form>
+      <p className="subtitulo">
+        Aulas detectadas desde el horario importado. Aqui solo se consultan sus capacidades y tipo de uso.
+      </p>
 
       <div className="table-card">
         <table>

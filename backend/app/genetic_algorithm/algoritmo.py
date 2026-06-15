@@ -48,10 +48,14 @@ def generar_horario_ag(
     horario_limpio = []
     for clase in mejor["horario"]:
         horario_limpio.append({
+            "materia_id": clase["materia_id"],
             "materia": clase["materia"],
             "sigla": clase["sigla"],
+            "docente_id": clase["docente_id"],
             "docente": clase["docente"],
+            "aula_id": clase["aula_id"],
             "aula": clase["aula"],
+            "grupo_id": clase["grupo_id"],
             "grupo": clase["grupo"],
             "semestre": clase["semestre"],
             "dia": clase["dia"],

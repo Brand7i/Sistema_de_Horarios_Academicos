@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
+from app.database import Base, engine, run_startup_migrations
 from app.routes import docentes, materias, aulas, grupos, horarios
 
 Base.metadata.create_all(bind=engine)
+run_startup_migrations()
 
 app = FastAPI(
     title="Sistema de Horarios Académicos Automáticos",
