@@ -285,6 +285,18 @@ h1 {
   gap: 12px;
 }
 
+.selection-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.selection-actions button {
+  min-height: 52px;
+  white-space: nowrap;
+  font-size: 15px;
+}
+
 .selection-status {
   color: #64748b;
   font-size: 13px;
@@ -548,6 +560,21 @@ tr:hover {
 
 .resultado ul {
   margin-bottom: 0;
+}
+
+.resultado-conflicts {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #bfdbfe;
+  display: grid;
+  gap: 6px;
+}
+
+.resultado-conflicts p {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .dashboard-panels {
@@ -838,6 +865,10 @@ tr:hover {
   .subject-meta {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .selection-actions {
+    grid-template-columns: 1fr;
   }
 
   .teacher-option {

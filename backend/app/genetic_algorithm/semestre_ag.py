@@ -206,13 +206,13 @@ def calcular_fitness_semestre(horario):
     conflictos = []
     ocupacion_docente = {}
     ocupacion_aula = {}
-    ocupacion_grupo = {}
+    ocupacion_nivel = {}
 
     for clase in horario:
         clave_tiempo = (clase["dia"], clase["bloque"])
         clave_docente = (clase["docente_id"], *clave_tiempo)
         clave_aula = (clase["aula_id"], *clave_tiempo)
-        clave_grupo = (clase["materia_id"], *clave_tiempo)
+        clave_nivel = (clase["semestre"], *clave_tiempo)
 
         if clave_docente in ocupacion_docente:
             penalizacion += 80
@@ -226,11 +226,14 @@ def calcular_fitness_semestre(horario):
         else:
             ocupacion_aula[clave_aula] = True
 
-        if clave_grupo in ocupacion_grupo:
+        if clave_nivel in ocupacion_nivel:
+            clase_previa = ocupacion_nivel[clave_nivel]
             penalizacion += 90
-            conflictos.append(f"Choque de materia: {clase['materia']} en {clase['dia']} {clase['bloque']}")
+            conflictos.append(
+                f"Choque de horario: {clase_previa['materia']} y {clase['materia']} en {clase['dia']} {clase['bloque']}"
+            )
         else:
-            ocupacion_grupo[clave_grupo] = True
+            ocupacion_nivel[clave_nivel] = clase
 
         if clase["cantidad_estudiantes"] > clase["capacidad_aula"]:
             penalizacion += 25

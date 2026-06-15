@@ -19,6 +19,10 @@ function esFisicaGeneralEspecial(materia) {
   return materia?.sigla === "2006063";
 }
 
+function esGrupoFisicaTeoria(docente) {
+  return docente?.grupo_referencia?.endsWith("-GB");
+}
+
 function extraerDocentesSeleccionados(valor) {
   if (Array.isArray(valor)) return valor;
   return valor ? [valor] : [];
@@ -49,6 +53,18 @@ export default function GenerarHorario() {
   const [seleccion, setSeleccion] = useState({});
   const [resultado, setResultado] = useState(null);
   const [cargando, setCargando] = useState(false);
+
+  const limpiarGeneracion = () => {
+    setAlternativasAG([]);
+    setIndiceAlternativa(0);
+    setResultado(null);
+  };
+
+  const reiniciarTodo = () => {
+    setSeleccion({});
+    setHorarios([]);
+    limpiarGeneracion();
+  };
 
   const cargarConfiguracion = async (valorSemestre) => {
     const [configRes, importadosRes] = await Promise.all([
@@ -88,7 +104,7 @@ export default function GenerarHorario() {
     setHorarios(preview);
   }, [alternativasAG, indiceAlternativa, seleccion, horariosImportados]);
 
-  const generar = async () => {
+  const generar = async (docentesOverride = seleccion) => {
     if (!config) return;
 
     setCargando(true);
@@ -97,7 +113,7 @@ export default function GenerarHorario() {
     try {
       const res = await api.post("/horarios/generar", {
         semestre,
-        docentes_por_materia: seleccion,
+        docentes_por_materia: docentesOverride,
       });
       setResultado(res.data);
       setAlternativasAG(res.data.alternativas || []);
@@ -119,6 +135,44 @@ export default function GenerarHorario() {
   const seleccionVisible = totalAlternativas > 0
     ? construirSeleccionDesdeHorario(alternativaActual?.horario || [])
     : seleccion;
+  const conflictosActuales = alternativaActual?.conflictos || resultado?.conflictos || [];
+  const totalClasesActual = alternativaActual?.horario?.length || resultado?.total_clases || 0;
+
+  const seleccionarDocente = (materia, docente) => {
+    limpiarGeneracion();
+    setSeleccion((actual) => {
+      if (!esFisicaGeneralEspecial(materia)) {
+        return {
+          ...actual,
+          [materia.materia_id]: docente.id,
+        };
+      }
+
+      const teoria = materia.docentes.find(esGrupoFisicaTeoria);
+      const teoriaId = teoria?.id;
+      const actuales = extraerDocentesSeleccionados(actual[materia.materia_id]);
+      const laboratorioActual = actuales.find((id) => id !== teoriaId);
+
+      if (esGrupoFisicaTeoria(docente)) {
+        return {
+          ...actual,
+          [materia.materia_id]: laboratorioActual ? [docente.id, laboratorioActual] : [docente.id],
+        };
+      }
+
+      return {
+        ...actual,
+        [materia.materia_id]: teoriaId ? [teoriaId, docente.id] : [docente.id],
+      };
+    });
+  };
+
+  const generarDesdeCero = () => {
+    setSeleccion({});
+    setHorarios([]);
+    limpiarGeneracion();
+    generar({});
+  };
 
   return (
     <section>
@@ -133,9 +187,19 @@ export default function GenerarHorario() {
               ))}
             </select>
 
-            <button onClick={generar} disabled={!puedeGenerar}>
+            <button onClick={generarDesdeCero} disabled={!puedeGenerar}>
               {cargando ? "Generando..." : "Generar horario con AG"}
             </button>
+            <div className="selection-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={reiniciarTodo}
+                disabled={cargando && totalSeleccionadas === 0 && totalAlternativas === 0}
+              >
+                Reiniciar seleccion
+              </button>
+            </div>
             <span className="selection-status">
               {totalSeleccionadas} de {totalMaterias} materias con docente fijado manualmente
             </span>
@@ -164,20 +228,19 @@ export default function GenerarHorario() {
                     {materia.docentes.map((docente) => (
                       <label
                         key={docente.id}
-                        className={`teacher-option ${esFisicaGeneralEspecial(materia) && docente.grupo_referencia.endsWith("-GB") ? "teacher-option-fixed" : ""}`}
+                        className={`teacher-option ${esFisicaGeneralEspecial(materia) && esGrupoFisicaTeoria(docente) ? "teacher-option-fixed" : ""}`}
                       >
                         <input
-                          type="radio"
-                          name={`materia-${materia.materia_id}`}
+                          type={esFisicaGeneralEspecial(materia) && esGrupoFisicaTeoria(docente) ? "checkbox" : "radio"}
+                          name={esFisicaGeneralEspecial(materia) && !esGrupoFisicaTeoria(docente)
+                            ? `materia-${materia.materia_id}-laboratorio`
+                            : `materia-${materia.materia_id}`}
                           checked={extraerDocentesSeleccionados(seleccionVisible[materia.materia_id]).includes(docente.id)}
-                          onChange={() => setSeleccion((actual) => ({
-                            ...actual,
-                            [materia.materia_id]: docente.id,
-                          }))}
+                          onChange={() => seleccionarDocente(materia, docente)}
                         />
                         <span>
                           {docente.grupo_referencia} {docente.nombre}
-                          {esFisicaGeneralEspecial(materia) && docente.grupo_referencia.endsWith("-GB")
+                          {esFisicaGeneralEspecial(materia) && esGrupoFisicaTeoria(docente)
                             ? " - teoria fija"
                             : ""}
                         </span>
@@ -194,11 +257,18 @@ export default function GenerarHorario() {
           {resultado && (
             <div className="resultado">
               <h3>Resultado del algoritmo</h3>
-              <p><strong>Total de clases:</strong> {resultado.total_clases}</p>
+              <p><strong>Total de clases:</strong> {totalClasesActual}</p>
               <p><strong>Materias:</strong> {resultado.parametros.materias}</p>
               <p><strong>Bloques base del importado:</strong> {resultado.parametros.clases_base_importadas}</p>
               <p><strong>Alternativas generadas:</strong> {resultado.parametros.alternativas}</p>
-              <p><strong>Conflictos:</strong> {resultado.conflictos.length}</p>
+              <p><strong>Conflictos:</strong> {conflictosActuales.length}</p>
+              {conflictosActuales.length > 0 && (
+                <div className="resultado-conflicts">
+                  {conflictosActuales.slice(0, 4).map((conflicto) => (
+                    <p key={conflicto}>{conflicto}</p>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
