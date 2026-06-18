@@ -188,7 +188,7 @@ export default function GenerarHorario() {
             </select>
 
             <button onClick={generarDesdeCero} disabled={!puedeGenerar}>
-              {cargando ? "Generando..." : "Generar horario con AG"}
+              {cargando ? "Generando..." : "Generar horario"}
             </button>
             <div className="selection-actions">
               <button
@@ -256,7 +256,7 @@ export default function GenerarHorario() {
         <div className="schedule-panel">
           {resultado && (
             <div className="resultado">
-              <h3>Resultado del algoritmo</h3>
+              <h3>Resultado</h3>
               <p><strong>Total de clases:</strong> {totalClasesActual}</p>
               <p><strong>Materias:</strong> {resultado.parametros.materias}</p>
               <p><strong>Bloques base del importado:</strong> {resultado.parametros.clases_base_importadas}</p>
@@ -308,7 +308,7 @@ export default function GenerarHorario() {
 
           <div className="table-section">
             <h3>
-              {mostrandoPreview ? "Detalle de la seleccion actual" : "Detalle generado por AG"}
+              {mostrandoPreview ? "Detalle de la seleccion actual" : "Detalle del horario"}
             </h3>
             <TablaHorario horarios={horarios} />
           </div>

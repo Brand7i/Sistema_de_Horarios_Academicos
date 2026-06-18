@@ -75,14 +75,13 @@ h1 {
 
 .dashboard-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
   margin-bottom: 24px;
 }
 
-.dashboard-hero-copy,
-.dashboard-highlight {
+.dashboard-hero-copy {
   background: rgba(255, 255, 255, 0.9);
   border-radius: 18px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
@@ -108,33 +107,6 @@ h1 {
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 14px;
-}
-
-.dashboard-highlight {
-  padding: 22px;
-  background:
-    linear-gradient(135deg, #1d4ed8 0%, #2563eb 60%, #60a5fa 100%);
-  color: white;
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-
-.dashboard-highlight strong {
-  font-size: 42px;
-  line-height: 1;
-}
-
-.dashboard-highlight span {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.dashboard-highlight p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.84);
-  line-height: 1.45;
 }
 
 .cards {
@@ -877,10 +849,6 @@ tr:hover {
 
   .schedule-grid {
     min-width: 700px;
-  }
-
-  .dashboard-highlight strong {
-    font-size: 34px;
   }
 
   .schedule-header,

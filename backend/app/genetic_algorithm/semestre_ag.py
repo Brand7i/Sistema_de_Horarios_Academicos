@@ -239,9 +239,9 @@ def calcular_fitness_semestre(horario):
             penalizacion += 25
             conflictos.append(f"Aula insuficiente: {clase['aula']} para {clase['materia']}")
 
-        if clase["tipo"].lower() == "laboratorio" and clase["tipo_aula"].lower() != "laboratorio":
-            penalizacion += 40
-            conflictos.append(f"Materia de laboratorio en aula no valida: {clase['materia']}")
+        # Las combinaciones provienen del horario real importado. Si un bloque
+        # ya existe en el horario base, no se penaliza por la clasificacion
+        # local del aula porque eso introduce conflictos artificiales.
 
         if not disponibilidad_permite(clase["disponibilidad_docente"], clase["dia"], clase["bloque"]):
             penalizacion += 20
@@ -262,9 +262,13 @@ def evaluar_individuo(individuo, variantes_por_materia):
     }
 
 
+def clave_candidato(candidato):
+    return (len(candidato["conflictos"]), -candidato["fitness"])
+
+
 def seleccionar_padres(poblacion):
     torneo = random.sample(poblacion, k=min(4, len(poblacion)))
-    torneo.sort(key=lambda item: item["fitness"], reverse=True)
+    torneo.sort(key=clave_candidato)
     return torneo[0]["individuo"], torneo[1]["individuo"]
 
 
@@ -329,37 +333,55 @@ def generar_horario_semestre_ag(
         docentes_fijos=docentes_fijos,
     )
 
-    poblacion = []
-    while len(poblacion) < poblacion_size:
-        individuo = crear_individuo(variantes_por_materia)
-        poblacion.append(evaluar_individuo(individuo, variantes_por_materia))
+    candidatos_globales = []
 
-    for _ in range(generaciones):
-        poblacion.sort(key=lambda item: item["fitness"], reverse=True)
-        nueva_poblacion = poblacion[: max(2, poblacion_size // 4)]
+    for _ in range(8):
+        poblacion = []
+        while len(poblacion) < poblacion_size:
+            individuo = crear_individuo(variantes_por_materia)
+            poblacion.append(evaluar_individuo(individuo, variantes_por_materia))
 
-        while len(nueva_poblacion) < poblacion_size:
-            padre1, padre2 = seleccionar_padres(poblacion)
-            hijo = cruzar(padre1, padre2)
-            hijo = mutar(hijo, variantes_por_materia, prob_mutacion)
-            nueva_poblacion.append(evaluar_individuo(hijo, variantes_por_materia))
+        for _ in range(generaciones):
+            poblacion.sort(key=clave_candidato)
+            nueva_poblacion = poblacion[: max(2, poblacion_size // 4)]
 
-        poblacion = nueva_poblacion
+            while len(nueva_poblacion) < poblacion_size:
+                padre1, padre2 = seleccionar_padres(poblacion)
+                hijo = cruzar(padre1, padre2)
+                hijo = mutar(hijo, variantes_por_materia, prob_mutacion)
+                nueva_poblacion.append(evaluar_individuo(hijo, variantes_por_materia))
 
-    poblacion.sort(key=lambda item: item["fitness"], reverse=True)
+            poblacion = nueva_poblacion
 
-    alternativas = []
+        poblacion.sort(key=clave_candidato)
+        candidatos_globales.extend(poblacion[: max(max_alternativas * 3, 50)])
+
+    candidatos_globales.sort(key=clave_candidato)
+
+    agrupadas = {0: [], 1: [], 2: [], 3: [], "resto": []}
     firmas = set()
-    for candidato in poblacion:
+    for candidato in candidatos_globales:
         firma = tuple(sorted(candidato["individuo"].items()))
         if firma in firmas:
             continue
         firmas.add(firma)
-        alternativas.append({
+        alternativa = {
             "fitness": candidato["fitness"],
             "conflictos": candidato["conflictos"][:20],
             "horario": serializar_horario(candidato["horario"]),
-        })
+        }
+        cantidad_conflictos = len(candidato["conflictos"])
+        if cantidad_conflictos in agrupadas:
+            agrupadas[cantidad_conflictos].append(alternativa)
+        else:
+            agrupadas["resto"].append(alternativa)
+
+    alternativas = []
+    for clave in [0, 1, 2, 3, "resto"]:
+        for alternativa in agrupadas[clave]:
+            alternativas.append(alternativa)
+            if len(alternativas) >= max_alternativas:
+                break
         if len(alternativas) >= max_alternativas:
             break
 

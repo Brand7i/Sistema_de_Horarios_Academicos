@@ -60,14 +60,6 @@ export default function Dashboard() {
             Genera, revisa y compara horarios academicos por nivel, docente y materia.
           </p>
         </div>
-
-        <div className="dashboard-highlight">
-          <strong>{cargando ? "..." : resumen.horarios}</strong>
-          <span>bloques horarios registrados</span>
-          <p>
-            Cada bloque representa una clase en un dia y hora especificos.
-          </p>
-        </div>
       </div>
 
       <div className="cards dashboard-cards">
